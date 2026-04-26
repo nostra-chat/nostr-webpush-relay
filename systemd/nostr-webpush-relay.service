@@ -1,0 +1,22 @@
+[Unit]
+Description=nostr-webpush-relay
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+User=relay
+Group=relay
+WorkingDirectory=/opt/nostr-webpush-relay
+EnvironmentFile=/opt/nostr-webpush-relay/.env
+ExecStart=/usr/bin/node /opt/nostr-webpush-relay/dist/src/index.js
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+ReadWritePaths=/opt/nostr-webpush-relay/data
+LimitNOFILE=65536
+
+[Install]
+WantedBy=multi-user.target

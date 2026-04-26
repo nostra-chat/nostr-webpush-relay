@@ -18,23 +18,25 @@ AGPL-3.0-or-later. If you run a public instance, you must also publish your modi
 ## Status
 
 - [x] S1 — Scaffold
-- [ ] S2 — SQLite storage
-- [ ] S3 — NIP-98 auth
-- [ ] S4 — HTTP API
-- [ ] S5 — Relay subscriber
-- [ ] S6 — Push sender
-- [ ] S7 — Integration test
-- [ ] S8 — Deploy artifacts
+- [x] S2 — SQLite storage
+- [x] S3 — NIP-98 auth
+- [x] S4 — HTTP API
+- [x] S5 — Relay subscriber
+- [x] S6 — Push sender
+- [x] S7 — Integration test
+- [x] S8 — Deploy artifacts
 
-## Quickstart (full instructions arrive in S8)
+## Quickstart
 
 ```bash
 git clone https://github.com/nostra-chat/nostr-webpush-relay
 cd nostr-webpush-relay
-pnpm install
-cp .env.example .env  # set VAPID keys, see docs/DEPLOY.md
-pnpm dev
+cp .env.example .env  # set VAPID keys
+mkdir -p ./data
+docker compose up -d
 ```
+
+See [docs/DEPLOY.md](docs/DEPLOY.md) for full deployment guide (Docker, systemd, Cloudflare Tunnel).
 
 ## Documentation
 
