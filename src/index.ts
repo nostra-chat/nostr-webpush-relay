@@ -35,26 +35,34 @@ function reconcile(): void {
   pool.reconcile(plan);
 }
 
-const app = buildApp({storage, vapidPublic: config.vapidPublic});
+async function main(): Promise<void> {
+  const app = await buildApp({storage, vapidPublic: config.vapidPublic});
 
-app.addHook('onResponse', async(req, reply) => {
-  if(/^\/subscription\//.test(req.url) && [200, 204].includes(reply.statusCode)) {
-    reconcile();
+  app.addHook('onResponse', async(req, reply) => {
+    if(/^\/subscription\//.test(req.url) && [200, 204].includes(reply.statusCode)) {
+      reconcile();
+    }
+  });
+
+  reconcile();
+
+  try {
+    await app.listen({port: config.port, host: '0.0.0.0'});
+    log.info({port: config.port, allowedOrigins: config.allowedOrigins}, 'listening');
+  } catch(err) {
+    log.error({err}, 'failed to bind');
+    process.exit(1);
   }
-});
 
-reconcile();
+  process.on('SIGINT', () => {
+    log.info('shutdown');
+    pool.shutdown();
+    storage.close();
+    app.close().then(() => process.exit(0));
+  });
+}
 
-app.listen({port: config.port, host: '0.0.0.0'}).then(() => {
-  log.info({port: config.port}, 'listening');
-}).catch((err) => {
-  log.error({err}, 'failed to bind');
+main().catch((err) => {
+  log.error({err}, 'fatal startup error');
   process.exit(1);
-});
-
-process.on('SIGINT', () => {
-  log.info('shutdown');
-  pool.shutdown();
-  storage.close();
-  app.close().then(() => process.exit(0));
 });
