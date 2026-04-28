@@ -17,6 +17,7 @@
     "lint": "eslint 'src/**/*.ts' 'tests/**/*.ts'"
   },
   "dependencies": {
+    "@fastify/cors": "^11.2.0",
     "better-sqlite3": "^11.0.0",
     "fastify": "^5.0.0",
     "nostr-tools": "^2.7.0",

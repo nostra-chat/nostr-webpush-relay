@@ -15,11 +15,11 @@ function nip98(opts: {sk: Uint8Array; method: string; url: string}): string {
 
 describe('HTTP API', () => {
   let storage: Storage;
-  let app: ReturnType<typeof buildApp>;
+  let app: Awaited<ReturnType<typeof buildApp>>;
 
-  beforeEach(() => {
+  beforeEach(async() => {
     storage = new Storage(':memory:');
-    app = buildApp({storage, vapidPublic: 'PUB_KEY_XX'});
+    app = await buildApp({storage, vapidPublic: 'PUB_KEY_XX', allowedOrigins: ['https://nostra.chat']});
   });
 
   it('GET /healthz returns ok', async() => {
@@ -80,6 +80,57 @@ describe('HTTP API', () => {
       payload: {endpoint: 'x', keys: {p256dh: 'a', auth: 'b'}}
     });
     expect(r.statusCode).toBe(403);
+  });
+
+  describe('CORS', () => {
+    it('GET /info echoes Access-Control-Allow-Origin for the configured origin', async() => {
+      const r = await app.inject({
+        method: 'GET',
+        url: '/info',
+        headers: {origin: 'https://nostra.chat'}
+      });
+      expect(r.statusCode).toBe(200);
+      expect(r.headers['access-control-allow-origin']).toBe('https://nostra.chat');
+    });
+
+    it('preflight OPTIONS /subscription/:pubkey returns CORS headers', async() => {
+      const r = await app.inject({
+        method: 'OPTIONS',
+        url: '/subscription/aa',
+        headers: {
+          origin: 'https://nostra.chat',
+          'access-control-request-method': 'PUT',
+          'access-control-request-headers': 'authorization,content-type'
+        }
+      });
+      expect(r.statusCode).toBe(204);
+      expect(r.headers['access-control-allow-origin']).toBe('https://nostra.chat');
+      expect(String(r.headers['access-control-allow-methods'])).toContain('PUT');
+      expect(String(r.headers['access-control-allow-headers']).toLowerCase()).toContain('authorization');
+    });
+
+    it('rejects unlisted origin', async() => {
+      const r = await app.inject({
+        method: 'OPTIONS',
+        url: '/info',
+        headers: {
+          origin: 'https://evil.example',
+          'access-control-request-method': 'GET'
+        }
+      });
+      expect(r.headers['access-control-allow-origin']).toBeUndefined();
+    });
+
+    it('wildcard allowedOrigins permits any origin', async() => {
+      const wildcardApp = await buildApp({storage, vapidPublic: 'P', allowedOrigins: ['*']});
+      const r = await wildcardApp.inject({
+        method: 'GET',
+        url: '/info',
+        headers: {origin: 'https://anything.example'}
+      });
+      expect(r.statusCode).toBe(200);
+      expect(r.headers['access-control-allow-origin']).toBe('*');
+    });
   });
 
   it('DELETE /subscription/:pubkey removes the row', async() => {

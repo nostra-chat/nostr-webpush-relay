@@ -94,6 +94,34 @@ curl https://push.nostra.chat/info
 
 After the relay is reachable on its public URL, register a fake subscription via curl with a NIP-98 header (the `tools/nip98-curl.sh` helper, if present, automates this) and check `/healthz` for `uptime_s` increasing.
 
+## 5b. CORS
+
+The HTTP API is called from a browser context (the Nostra.chat client at `https://nostra.chat` issues `fetch()` to `/info`, `PUT /subscription/:pubkey`, and `DELETE /subscription/:pubkey`). Without a permissive `Access-Control-Allow-Origin` response header the browser blocks the response and the client silently fails to subscribe.
+
+The relay handles CORS in-process via `@fastify/cors`. Configure the allowlist via `ALLOWED_ORIGINS` (comma-separated) in `.env`:
+
+```bash
+# Production: pin to the actual client origin
+ALLOWED_ORIGINS=https://nostra.chat
+
+# Multiple origins (e.g. staging + production)
+ALLOWED_ORIGINS=https://nostra.chat,https://staging.nostra.chat
+
+# Public dev relay only — don't use in production
+ALLOWED_ORIGINS=*
+```
+
+Default is `https://nostra.chat`. The headers emitted are:
+
+```
+Access-Control-Allow-Origin: <echoed origin or *>
+Access-Control-Allow-Methods: GET, PUT, DELETE, OPTIONS
+Access-Control-Allow-Headers: Content-Type, Authorization
+Access-Control-Max-Age: 600
+```
+
+If you front the relay with another HTTP layer (Cloudflare Workers, nginx, Caddy) that sets its own CORS headers, make sure they don't conflict — duplicate `Access-Control-Allow-Origin` headers cause browsers to reject the response.
+
 ## 6. Operations
 
 - **Logs**: `docker compose logs -f relay` or `journalctl -u nostr-webpush-relay -f`

@@ -35,7 +35,7 @@ const RELAY_PORT = 28788;
 
 describe('integration: register → relay event → push fan-out', () => {
   let storage: Storage;
-  let app: ReturnType<typeof buildApp>;
+  let app: Awaited<ReturnType<typeof buildApp>>;
   let pool: RelayPool;
   let mockRelay: WebSocketServer;
 
@@ -45,7 +45,7 @@ describe('integration: register → relay event → push fan-out', () => {
     pool = new RelayPool(async(evt, recipients) => {
       for(const pk of recipients) await fanout(storage, pk, evt);
     });
-    app = buildApp({storage, vapidPublic: 'PUB'});
+    app = await buildApp({storage, vapidPublic: 'PUB', allowedOrigins: ['*']});
     mockRelay = new WebSocketServer({port: RELAY_PORT});
   });
 

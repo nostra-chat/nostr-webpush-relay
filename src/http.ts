@@ -1,5 +1,6 @@
 // SPDX-License-Identifier: AGPL-3.0-or-later
 import Fastify, {type FastifyInstance} from 'fastify';
+import cors from '@fastify/cors';
 import {config} from './config.js';
 import {Storage} from './storage.js';
 import {verifyNip98, reqFullUrl} from './nip98.js';
@@ -13,10 +14,27 @@ const startTime = Date.now();
 export interface BuildAppDeps {
   storage: Storage;
   vapidPublic: string;
+  /**
+   * Allowed cross-origin requesters. Pass '*' to allow any origin (dev only).
+   * Defaults to config.allowedOrigins when omitted.
+   */
+  allowedOrigins?: string[];
 }
 
-export function buildApp(deps: BuildAppDeps): FastifyInstance {
+export async function buildApp(deps: BuildAppDeps): Promise<FastifyInstance> {
   const app = Fastify({logger: false, trustProxy: true});
+
+  const origins = deps.allowedOrigins ?? config.allowedOrigins;
+  await app.register(cors, {
+    // Pass the literal '*' string when wildcard is requested so the response
+    // header is `Access-Control-Allow-Origin: *` (browsers reject mismatched
+    // echo-back for opaque/null origins). For an allowlist, pass the array
+    // and @fastify/cors echoes the request origin only if it matches.
+    origin: origins.includes('*') ? '*' : origins,
+    methods: ['GET', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    maxAge: 600
+  });
 
   app.get('/healthz', async() => ({
     status: 'ok',
